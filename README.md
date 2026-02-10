@@ -99,10 +99,6 @@ const CACHE_TTL_SEC = 10 * 60; // Cache duration
 - All actions timestamped and logged
 - Access control via Google account permissions
 
-## License
-
-MIT License
-
 ## Support
 
 For issues or questions, contact your system administrator.
