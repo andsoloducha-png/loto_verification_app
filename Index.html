@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+      :root {
+        --lounge-dark: #1A1A1A;
+        --lounge-blue: #0e1c4e;
+        --lounge-orange: #d04a1e;
+        --lounge-bg: #F4F6F8;
+      }
+      body { background-color: var(--lounge-bg); font-family: 'Inter', sans-serif; color: var(--lounge-dark); }
+      
+      .app-header {
+        background: linear-gradient(135deg, var(--lounge-dark) 0%, #2a2a2a 100%);
+        color: white; padding: 25px 0; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      }
+      .brand-logo { font-weight: 700; letter-spacing: 1px; text-transform: uppercase; font-size: 1.2rem; }
+      .app-title { font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; margin-top: 5px; }
+      .card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); background: white; }
+      
+      /* Style dla LOTO */
+      .img-container {
+        position: relative; width: 100%; height: 350px; 
+        background: #f8f9fa; border-radius: 12px; margin: 20px 0; 
+        display: none; align-items: center; justify-content: center; cursor: zoom-in;
+      }
+      .step-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+      .btn-lounge-primary { background-color: var(--lounge-dark); color: white; border: none; padding: 15px; width: 100%; font-weight: 600; border-radius: 10px; }
+      
+      /* Style dla DASHBOARDU */
+      .stat-card { padding: 20px; text-align: center; border-radius: 12px; background: white; height: 100%; }
+      .stat-val { font-size: 2.5rem; font-weight: 700; color: var(--lounge-blue); }
+      .stat-label { font-size: 0.85rem; text-transform: uppercase; color: #666; letter-spacing: 1px; }
+      .issue-item { border-left: 4px solid var(--lounge-orange); background: white; padding: 15px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+      .issue-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-bottom: 5px; }
+      .issue-title { font-weight: 600; margin-bottom: 5px; }
+      
+      #lightbox-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; display:none; align-items:center; justify-content:center; }
+    </style>
+  </head>
+  <body>
+
+    <div id="loader-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:9999;display:flex;justify-content:center;align-items:center;">
+      <div class="spinner-border text-dark"></div>
+    </div>
+
+    <div id="lightbox-modal" onclick="this.style.display='none'">
+       <img id="lightbox-img" src="" style="max-width:95vw;max-height:95vh;">
+    </div>
+
+    <div class="app-header text-center">
+      <div class="brand-logo">LOUNGE <span style="font-weight:300">by Zalando</span></div>
+      <div class="app-title" id="main-title">Weryfikacja LOTO</div>
+    </div>
+
+    <div class="container pb-5" style="max-width: 600px;">
+
+      <div id="admin-dashboard" class="d-none">
+         <h4 class="mb-4 fw-bold text-secondary">Panel Kierownika</h4>
+         
+         <div class="row g-3 mb-4">
+           <div class="col-6">
+             <div class="stat-card">
+               <div class="stat-val" id="stat-today">0</div>
+               <div class="stat-label">Dzisiaj</div>
+             </div>
+           </div>
+           <div class="col-6">
+             <div class="stat-card">
+               <div class="stat-val text-danger" id="stat-rejected">0</div>
+               <div class="stat-label">Błędy</div>
+             </div>
+           </div>
+         </div>
+
+         <h5 class="mb-3 border-bottom pb-2">Ostatnie Zgłoszenia (Awarię)</h5>
+         <div id="issues-list">
+            <p class="text-center text-muted py-3">Brak zgłoszonych problemów.</p>
+         </div>
+         
+         <button class="btn btn-outline-dark w-100 mt-4" onclick="location.reload()">Odśwież dane</button>
+      </div>
+
+      <div id="loto-app" class="d-none">
+        
+        <div id="step-card" class="card p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+             <span class="badge bg-secondary" id="step-counter">ETAP 1/X</span>
+             <span class="small text-muted"><?= userEmail ?></span>
+          </div>
+          
+          <h4 id="step-title" class="fw-bold mb-3">...</h4>
+          <p id="step-desc" class="text-secondary">...</p>
+          
+          <div id="img-wrapper" class="img-container" onclick="openLightbox()">
+             <img id="step-image" class="step-img">
+             <div style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.6);color:white;padding:4px 10px;border-radius:20px;font-size:0.7rem;">🔍 Zoom</div>
+          </div>
+
+          <div class="d-grid gap-3 mt-4">
+            <button class="btn btn-lounge-primary" id="btn-confirm" onclick="handleConfirm()">ZATWIERDZAM</button>
+            <button class="btn btn-outline-danger" onclick="showRejectForm()">Zgłoś problem</button>
+          </div>
+        </div>
+
+        <div id="reject-card" class="card p-4 d-none">
+          <h5 class="text-danger fw-bold">Zgłoszenie Problemu</h5>
+          <textarea id="reject-reason" class="form-control mb-3" rows="3" placeholder="Opisz powód..."></textarea>
+          <button class="btn btn-danger w-100 mb-2" id="btn-reject-submit" onclick="handleReject()">Wyślij</button>
+          <button class="btn btn-light w-100" onclick="cancelReject()">Anuluj</button>
+        </div>
+
+        <div id="success-screen" class="card p-5 text-center d-none">
+           <h1 class="text-success mb-3">✓</h1>
+           <h3>Gotowe</h3>
+           <p>Procedura zakończona.</p>
+           <button class="btn btn-dark mt-3" onclick="location.reload()">Zamknij</button>
+        </div>
+
+      </div> </div>
+
+    <script>
+      let steps = [];
+      let currentIndex = 0;
+      let currentZone = "<?= zoneParam ?>"; 
+
+      window.onload = function() {
+        // LOGIKA PRZEŁĄCZANIA WIDOKÓW
+        if (currentZone === 'ADMIN') {
+          initAdminDashboard();
+        } else if (currentZone) {
+          initLotoApp();
+        } else {
+          alert("Brak strefy w linku.");
+          document.getElementById('loader-overlay').classList.add('d-none');
+        }
+      };
+
+      // --- LOGIKA DASHBOARDU ---
+      function initAdminDashboard() {
+        document.getElementById('main-title').innerText = "DASHBOARD";
+        document.getElementById('admin-dashboard').classList.remove('d-none');
+        
+        google.script.run.withSuccessHandler(renderDashboard).getDashboardData();
+      }
+
+      function renderDashboard(data) {
+        document.getElementById('loader-overlay').classList.add('d-none');
+        document.getElementById('stat-today').innerText = data.today;
+        document.getElementById('stat-rejected').innerText = data.rejected;
+
+        const list = document.getElementById('issues-list');
+        list.innerHTML = '';
+
+        if (data.issues.length === 0) {
+           list.innerHTML = '<div class="alert alert-success">Wszystko działa poprawnie. Brak zgłoszeń.</div>';
+           return;
+        }
+
+        data.issues.forEach(issue => {
+          const div = document.createElement('div');
+          div.className = 'issue-item';
+          div.innerHTML = `
+            <div class="issue-header">
+              <span>${issue.date}</span>
+              <span class="badge bg-secondary text-white">${issue.zone}</span>
+            </div>
+            <div class="issue-title text-danger">${issue.step}</div>
+            <div class="small text-dark mb-2">Powód: ${issue.reason}</div>
+            <div class="small text-muted" style="font-size:0.75rem">Zgłosił: ${issue.email}</div>
+          `;
+          list.appendChild(div);
+        });
+      }
+
+      // --- LOGIKA LOTO (STANDARDOWA) ---
+      function initLotoApp() {
+        document.getElementById('loto-app').classList.remove('d-none');
+        const headerZone = document.createElement('div');
+        headerZone.className = 'badge bg-light text-dark mt-2';
+        headerZone.innerText = currentZone;
+        document.querySelector('.app-header').appendChild(headerZone);
+
+        google.script.run
+          .withSuccessHandler(data => {
+            document.getElementById('loader-overlay').classList.add('d-none');
+            steps = data;
+            if(steps.length > 0) renderStep();
+            else alert("Brak etapów");
+          })
+          .getLotoSteps(currentZone);
+      }
+
+      function renderStep() {
+        const step = steps[currentIndex];
+        document.getElementById('step-counter').innerText = `ETAP ${currentIndex+1}/${steps.length}`;
+        document.getElementById('step-title').innerText = step.name;
+        document.getElementById('step-desc').innerText = step.desc;
+        
+        const wrapper = document.getElementById('img-wrapper');
+        const img = document.getElementById('step-image');
+        
+        img.src = ''; 
+        if(step.fileId) {
+            wrapper.style.display = 'flex';
+            if(step.cachedBase64) img.src = step.cachedBase64;
+            else {
+                google.script.run.withSuccessHandler(b64 => {
+                    step.cachedBase64 = b64;
+                    img.src = b64;
+                }).getStepImageBase64(step.fileId);
+            }
+        } else {
+            wrapper.style.display = 'none';
+        }
+      }
+
+      function handleConfirm() {
+        const step = steps[currentIndex];
+        
+        // OPTIMISTIC UI
+        currentIndex++;
+        if(currentIndex < steps.length) renderStep();
+        else showSuccess();
+
+        google.script.run.logStepAction(currentZone, step.name, 'ZATWIERDZONO', '');
+      }
+
+      function handleReject() {
+        const reason = document.getElementById('reject-reason').value;
+        if(!reason) { alert("Podaj powód!"); return; }
+        
+        const btn = document.getElementById('btn-reject-submit');
+        btn.disabled = true; btn.innerText = "Wysyłanie...";
+        
+        google.script.run.withSuccessHandler(() => {
+           alert("Zgłoszono.");
+           location.reload();
+        }).logStepAction(currentZone, steps[currentIndex].name, 'ODRZUCONO', reason);
+      }
+
+      // Helpery UI
+      function showRejectForm() {
+         document.getElementById('step-card').classList.add('d-none');
+         document.getElementById('reject-card').classList.remove('d-none');
+      }
+      function cancelReject() {
+         document.getElementById('reject-card').classList.add('d-none');
+         document.getElementById('step-card').classList.remove('d-none');
+      }
+      function showSuccess() {
+         document.getElementById('step-card').classList.add('d-none');
+         document.getElementById('success-screen').classList.remove('d-none');
+      }
+      function openLightbox() {
+         const src = document.getElementById('step-image').src;
+         if(src) {
+           document.getElementById('lightbox-img').src = src;
+           document.getElementById('lightbox-modal').style.display = 'flex';
+         }
+      }
+    </script>
+  </body>
+</html>
